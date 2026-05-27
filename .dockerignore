@@ -1,0 +1,13 @@
+.git
+.github
+.turbo
+node_modules
+apps/*/node_modules
+packages/*/node_modules
+apps/*/dist
+apps/*/dist-electron
+packages/*/dist
+coverage
+tmp
+*.log
+deploy/kubernetes/*.local.yaml

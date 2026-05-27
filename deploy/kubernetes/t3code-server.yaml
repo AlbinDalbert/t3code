@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: t3code-state
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: t3code-workspace
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: t3code-codex-home
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: t3code
+spec:
+  selector:
+    app: t3code
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: t3code
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: t3code
+  template:
+    metadata:
+      labels:
+        app: t3code
+    spec:
+      containers:
+        - name: t3code
+          image: ghcr.io/albindalbert/t3code:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: T3_HOST
+              value: "0.0.0.0"
+            - name: T3_PORT
+              value: "3773"
+            - name: T3CODE_HOME
+              value: /var/lib/t3code
+            - name: T3_WORKSPACE
+              value: /workspace
+            - name: CODEX_HOME
+              value: /var/lib/codex
+          ports:
+            - name: http
+              containerPort: 3773
+          readinessProbe:
+            httpGet:
+              path: /.well-known/t3/environment
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /.well-known/t3/environment
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          volumeMounts:
+            - name: state
+              mountPath: /var/lib/t3code
+            - name: workspace
+              mountPath: /workspace
+            - name: codex-home
+              mountPath: /var/lib/codex
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: t3code-state
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: t3code-workspace
+        - name: codex-home
+          persistentVolumeClaim:
+            claimName: t3code-codex-home
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: t3code
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: t3.lan
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: t3code
+                port:
+                  name: http

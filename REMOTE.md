@@ -12,6 +12,8 @@ That gives you:
 - transport security at the network layer
 - less exposure than opening the server to the public internet
 
+If you want to run the headless server in Kubernetes, see [docs/kubernetes.md](./docs/kubernetes.md).
+
 ## Enabling Network Access
 
 There are two ways to expose your server for remote connections: from the desktop app or from the CLI.
