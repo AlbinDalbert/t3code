@@ -162,6 +162,10 @@ The manifest creates:
 - one PVC for the working directory / projects
 - one PVC for the Codex home/auth state
 
+The deployment uses `strategy: Recreate` instead of a rolling update. That matches this workload:
+single replica, one pinned node, and `ReadWriteOnce` PVCs. It avoids overlapping ReplicaSets during
+updates and makes failures easier to interpret.
+
 The PVCs request the `local-path` storage class, and the pod is pinned to the Kubernetes node whose
 hostname label is `sietch-tabr`. The deploy script builds `linux/amd64` by default for that node. If
 the node is offline or `NotReady`, the deployment is expected to remain pending until it comes back.
