@@ -29,28 +29,38 @@ This repo now includes a `deploy.sh` patterned after your `hermes` flow:
 Default behavior:
 
 - builds with `nerdctl` in namespace `k8s.io`
+- builds the image for `linux/amd64` by default, matching the pinned `sietch-tabr` node
 - tags the image as `ghcr.io/albindalbert/t3code:latest`
 - applies `deploy/kubernetes/t3code-server.yaml`
 - sets the `deploy/t3code` container image to the exact built tag
 - restarts `deploy/t3code`
 
-The script assumes the target Kubernetes namespace already exists.
+The script deploys to the `t3` namespace by default and assumes the target Kubernetes namespace
+already exists.
 
 Supported environment variables:
 
 ```text
 IMAGE_REPO=ghcr.io/albindalbert/t3code
 IMAGE_TAG=latest
-K8S_NAMESPACE=t3code
+K8S_NAMESPACE=t3
 NERDCTL_NAMESPACE=k8s.io
 NO_CACHE=1
 TARGETARCH=amd64|arm64
+TARGETPLATFORM=linux/amd64|linux/arm64
 ```
 
 Example:
 
 ```bash
 IMAGE_TAG=dev ./deploy.sh dev
+```
+
+If you intentionally want an ARM image for local Pi testing instead of the `sietch-tabr` deployment
+target, override the architecture:
+
+```bash
+TARGETARCH=arm64 IMAGE_TAG=pi ./deploy.sh pi
 ```
 
 ## Run It Locally
@@ -76,7 +86,7 @@ The server prints the pairing URL and token to stdout. Treat those like credenti
 Apply the bundled manifest:
 
 ```bash
-kubectl apply -f deploy/kubernetes/t3code-server.yaml
+kubectl apply -n t3 -f deploy/kubernetes/t3code-server.yaml
 ```
 
 The manifest creates:
@@ -87,6 +97,10 @@ The manifest creates:
 - one PVC for T3 state
 - one PVC for the working directory / projects
 - one PVC for the Codex home/auth state
+
+The PVCs request the `local-path` storage class, and the pod is pinned to the Kubernetes node whose
+hostname label is `sietch-tabr`. The deploy script builds `linux/amd64` by default for that node. If
+the node is offline or `NotReady`, the deployment is expected to remain pending until it comes back.
 
 ### Access Pattern
 
@@ -125,7 +139,7 @@ mounts a persistent Codex home into the pod.
 After the pod is up, log into Codex once:
 
 ```bash
-kubectl exec -it deploy/t3code -- codex login
+kubectl exec -n t3 -it deploy/t3code -- codex login
 ```
 
 That writes auth state into the `t3code-codex-home` PVC.

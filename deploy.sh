@@ -5,21 +5,22 @@ TAG="${1:-latest}"
 IMAGE_REPO="${IMAGE_REPO:-ghcr.io/albindalbert/t3code}"
 IMAGE_TAG="${IMAGE_TAG:-$TAG}"
 IMAGE="${IMAGE_REPO}:${IMAGE_TAG}"
-K8S_NAMESPACE="${K8S_NAMESPACE:-t3code}"
+K8S_NAMESPACE="${K8S_NAMESPACE:-t3}"
 NERDCTL_NAMESPACE="${NERDCTL_NAMESPACE:-k8s.io}"
-NO_CACHE="${NO_CACHE:-1}"
-TARGETARCH="${TARGETARCH:-}"
+NO_CACHE="${NO_CACHE:-0}"
+TARGETARCH="${TARGETARCH:-amd64}"
 
-if [ -z "${TARGETARCH}" ]; then
-    case "$(uname -m)" in
-        aarch64|arm64) TARGETARCH="arm64" ;;
-        x86_64|amd64) TARGETARCH="amd64" ;;
-        *)
-            echo "Unsupported architecture: $(uname -m)" >&2
-            exit 1
-            ;;
-    esac
-fi
+case "${TARGETARCH}" in
+    x86_64) TARGETARCH="amd64" ;;
+    aarch64) TARGETARCH="arm64" ;;
+    amd64|arm64) ;;
+    *)
+        echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2
+        exit 1
+        ;;
+esac
+
+TARGETPLATFORM="${TARGETPLATFORM:-linux/${TARGETARCH}}"
 
 if ! pgrep -x buildkitd >/dev/null 2>&1; then
     sudo buildkitd >/dev/null 2>&1 &
@@ -27,6 +28,7 @@ if ! pgrep -x buildkitd >/dev/null 2>&1; then
 fi
 
 build_args=(
+    --platform "${TARGETPLATFORM}"
     --build-arg "TARGETARCH=${TARGETARCH}"
     -t "${IMAGE}"
     .
@@ -36,7 +38,7 @@ if [ "${NO_CACHE}" = "1" ]; then
     build_args=(--no-cache "${build_args[@]}")
 fi
 
-echo "Building ${IMAGE} for ${TARGETARCH} in namespace ${NERDCTL_NAMESPACE}"
+echo "Building ${IMAGE} for ${TARGETPLATFORM} in namespace ${NERDCTL_NAMESPACE}"
 sudo nerdctl --namespace "${NERDCTL_NAMESPACE}" build "${build_args[@]}"
 
 echo "Applying Kubernetes manifest in namespace ${K8S_NAMESPACE}"

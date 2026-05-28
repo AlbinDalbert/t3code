@@ -2,6 +2,10 @@ FROM oven/bun:1.3.11 AS build
 
 WORKDIR /app
 
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY . .
 
 RUN bun install .
@@ -22,7 +26,7 @@ ENV T3_PORT=3773
 
 COPY --from=build /app /app
 
-RUN npm install --global @openai/codex \
+RUN bun install --global @openai/codex \
   && mkdir -p /var/lib/t3code /var/lib/codex /workspace \
   && chmod +x /app/apps/server/scripts/container-entrypoint.sh
 

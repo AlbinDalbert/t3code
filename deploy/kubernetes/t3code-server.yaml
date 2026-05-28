@@ -3,6 +3,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: t3code-state
 spec:
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:
@@ -14,6 +15,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: t3code-workspace
 spec:
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:
@@ -25,6 +27,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: t3code-codex-home
 spec:
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:
@@ -57,6 +60,8 @@ spec:
       labels:
         app: t3code
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: sietch-tabr
       containers:
         - name: t3code
           image: ghcr.io/albindalbert/t3code:latest
