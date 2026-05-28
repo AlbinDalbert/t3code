@@ -106,6 +106,37 @@ function selectRemoteUrl(
   }
 }
 
+function normalizeCloneRemoteUrl(
+  remoteUrl: string,
+  protocol: SourceControlCloneProtocol | undefined,
+): string {
+  if (protocol === "ssh") {
+    return remoteUrl;
+  }
+
+  const scpLikeMatch = /^git@([^:/]+)[:/]([^:]+?)(?:\.git)?$/.exec(remoteUrl);
+  if (scpLikeMatch) {
+    const [, host, repositoryPath] = scpLikeMatch;
+    if (host && repositoryPath) {
+      return `https://${host}/${repositoryPath}.git`;
+    }
+  }
+
+  try {
+    const url = new URL(remoteUrl);
+    if (url.protocol === "ssh:" && url.username === "git") {
+      const repositoryPath = url.pathname.replace(/^\/+/, "").replace(/\.git$/, "");
+      if (url.hostname.length > 0 && repositoryPath.length > 0) {
+        return `https://${url.hostname}/${repositoryPath}.git`;
+      }
+    }
+  } catch {
+    return remoteUrl;
+  }
+
+  return remoteUrl;
+}
+
 function expandHomePath(input: string, path: Path.Path): string {
   if (input === "~") {
     return NodeOS.homedir();
@@ -230,6 +261,8 @@ export const make = Effect.fn("makeSourceControlRepositoryService")(function* ()
         detail: "Enter a repository path or clone URL before cloning.",
       });
     }
+
+    remoteUrl = normalizeCloneRemoteUrl(remoteUrl, input.protocol);
 
     yield* git.execute({
       operation: "SourceControlRepositoryService.cloneRepository",

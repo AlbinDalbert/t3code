@@ -4687,7 +4687,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             (request) => request._tag === WS_METHODS.sourceControlCloneRepository,
           ) as { destinationPath?: string; remoteUrl?: string } | undefined;
           expect(cloneRequest).toMatchObject({
-            remoteUrl: "git@github.com:t3-oss/t3-env.git",
+            remoteUrl: "https://github.com/t3-oss/t3-env",
             destinationPath: "~/Development/t3env",
           });
         },

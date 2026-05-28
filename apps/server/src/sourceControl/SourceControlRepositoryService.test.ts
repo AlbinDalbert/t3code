@@ -188,6 +188,85 @@ it.effect("prefers HTTPS when cloning a looked-up repository with automatic prot
   }).pipe(Effect.provide(NodeServices.layer)),
 );
 
+it.effect("normalizes raw SSH clone URLs to HTTPS by default", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const parent = yield* fs.makeTempDirectoryScoped({
+      prefix: "t3-source-control-clone-raw-ssh-parent-",
+    });
+    const destinationPath = `${parent}/t3code`;
+    const cloneCalls: Array<{ cwd: string; args: ReadonlyArray<string> }> = [];
+
+    yield* Effect.gen(function* () {
+      const service = yield* SourceControlRepositoryService.SourceControlRepositoryService;
+      const result = yield* service.cloneRepository({
+        remoteUrl: CLONE_URLS.sshUrl,
+        destinationPath,
+      });
+
+      assert.strictEqual(result.remoteUrl, `${CLONE_URLS.url}.git`);
+      assert.deepStrictEqual(cloneCalls, [
+        {
+          cwd: parent,
+          args: ["clone", `${CLONE_URLS.url}.git`, "t3code"],
+        },
+      ]);
+    }).pipe(
+      Effect.provide(
+        makeLayer({
+          git: {
+            execute: (input) =>
+              Effect.sync(() => {
+                cloneCalls.push({ cwd: input.cwd, args: input.args });
+                return processOutput();
+              }),
+          },
+        }),
+      ),
+    );
+  }).pipe(Effect.provide(NodeServices.layer)),
+);
+
+it.effect("preserves raw SSH clone URLs when SSH is explicitly requested", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const parent = yield* fs.makeTempDirectoryScoped({
+      prefix: "t3-source-control-clone-explicit-ssh-parent-",
+    });
+    const destinationPath = `${parent}/t3code`;
+    const cloneCalls: Array<{ cwd: string; args: ReadonlyArray<string> }> = [];
+
+    yield* Effect.gen(function* () {
+      const service = yield* SourceControlRepositoryService.SourceControlRepositoryService;
+      const result = yield* service.cloneRepository({
+        remoteUrl: CLONE_URLS.sshUrl,
+        destinationPath,
+        protocol: "ssh",
+      });
+
+      assert.strictEqual(result.remoteUrl, CLONE_URLS.sshUrl);
+      assert.deepStrictEqual(cloneCalls, [
+        {
+          cwd: parent,
+          args: ["clone", CLONE_URLS.sshUrl, "t3code"],
+        },
+      ]);
+    }).pipe(
+      Effect.provide(
+        makeLayer({
+          git: {
+            execute: (input) =>
+              Effect.sync(() => {
+                cloneCalls.push({ cwd: input.cwd, args: input.args });
+                return processOutput();
+              }),
+          },
+        }),
+      ),
+    );
+  }).pipe(Effect.provide(NodeServices.layer)),
+);
+
 it.effect("publishes by creating the repository, adding a remote, and pushing upstream", () => {
   const createCalls: Array<{ cwd: string; repository: string; visibility: string }> = [];
   const remoteCalls: Array<{ cwd: string; preferredName: string; url: string }> = [];
