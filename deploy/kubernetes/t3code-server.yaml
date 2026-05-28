@@ -78,6 +78,8 @@ spec:
               value: "3773"
             - name: T3CODE_HOME
               value: /var/lib/t3code
+            - name: GH_CONFIG_DIR
+              value: /var/lib/t3code/gh
             - name: T3_WORKSPACE
               value: /workspace
             - name: CODEX_HOME
