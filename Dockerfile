@@ -54,6 +54,8 @@ COPY --from=build /app /app
 RUN --mount=type=cache,target=/root/.bun/install/cache \
   bun install --global @openai/codex \
   && mkdir -p /var/lib/t3code /var/lib/codex /workspace \
+  && mkdir -p /root/.ssh \
+  && ssh-keyscan github.com >> /root/.ssh/known_hosts \
   && chmod +x /app/apps/server/scripts/container-entrypoint.sh
 
 EXPOSE 3773

@@ -148,6 +148,46 @@ it.effect("clones a looked-up repository into the requested destination", () =>
   }).pipe(Effect.provide(NodeServices.layer)),
 );
 
+it.effect("prefers HTTPS when cloning a looked-up repository with automatic protocol", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const parent = yield* fs.makeTempDirectoryScoped({
+      prefix: "t3-source-control-clone-auto-parent-",
+    });
+    const destinationPath = `${parent}/t3code`;
+    const cloneCalls: Array<{ cwd: string; args: ReadonlyArray<string> }> = [];
+
+    yield* Effect.gen(function* () {
+      const service = yield* SourceControlRepositoryService.SourceControlRepositoryService;
+      const result = yield* service.cloneRepository({
+        provider: "github",
+        repository: "octocat/t3code",
+        destinationPath,
+      });
+
+      assert.strictEqual(result.remoteUrl, CLONE_URLS.url);
+      assert.deepStrictEqual(cloneCalls, [
+        {
+          cwd: parent,
+          args: ["clone", CLONE_URLS.url, "t3code"],
+        },
+      ]);
+    }).pipe(
+      Effect.provide(
+        makeLayer({
+          git: {
+            execute: (input) =>
+              Effect.sync(() => {
+                cloneCalls.push({ cwd: input.cwd, args: input.args });
+                return processOutput();
+              }),
+          },
+        }),
+      ),
+    );
+  }).pipe(Effect.provide(NodeServices.layer)),
+);
+
 it.effect("publishes by creating the repository, adding a remote, and pushing upstream", () => {
   const createCalls: Array<{ cwd: string; repository: string; visibility: string }> = [];
   const remoteCalls: Array<{ cwd: string; preferredName: string; url: string }> = [];
