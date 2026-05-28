@@ -65,7 +65,7 @@ spec:
       containers:
         - name: t3code
           image: ghcr.io/albindalbert/t3code:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           env:
             - name: T3_HOST
               value: "0.0.0.0"

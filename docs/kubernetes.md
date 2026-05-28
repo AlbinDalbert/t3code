@@ -15,28 +15,75 @@ The image:
 ## Build The Image
 
 ```bash
-sudo nerdctl --namespace k8s.io build -t ghcr.io/albindalbert/t3code:latest .
+./deploy/build-and-push.sh
 ```
 
-## Local Deploy Script
+This builds on your laptop with Docker Buildx and pushes to GHCR. The default target is
+`linux/amd64`, matching the pinned `sietch-tabr` deployment node.
 
-This repo now includes a `deploy.sh` patterned after your `hermes` flow:
+Supported environment variables:
+
+```text
+IMAGE_REPO=ghcr.io/albindalbert/t3code
+IMAGE_TAG=latest
+TARGETARCH=arm64|amd64
+TARGETPLATFORM=linux/arm64|linux/amd64
+NO_CACHE=1
+PUSH=0
+CACHE_REF=ghcr.io/albindalbert/t3code:buildcache-amd64
+BUILDER_NAME=t3code-builder
+```
+
+Examples:
 
 ```bash
-./deploy.sh
+./deploy/build-and-push.sh
+IMAGE_TAG=dev ./deploy/build-and-push.sh dev
+TARGETARCH=amd64 IMAGE_TAG=amd64 ./deploy/build-and-push.sh amd64
+```
+
+The script uses a registry-backed BuildKit cache so dependency installs and build layers can survive
+between machines and between Docker builder resets:
+
+```text
+ghcr.io/albindalbert/t3code:buildcache-amd64
+```
+
+Make sure you are logged into GHCR before pushing:
+
+```bash
+echo "$GITHUB_TOKEN" | docker login ghcr.io -u AlbinDalbert --password-stdin
+```
+
+Use a GitHub personal access token, not your GitHub account password. The token needs package write
+access for `ghcr.io/albindalbert/t3code`.
+
+The build script requires the Docker Buildx plugin. On Arch-based systems:
+
+```bash
+sudo pacman -S docker-buildx
+```
+
+On Debian/Ubuntu Docker CE installs:
+
+```bash
+sudo apt install docker-buildx-plugin
+```
+
+## Roll Out On Kubernetes
+
+Run this on the control plane, or anywhere with a working `kubectl` context:
+
+```bash
+./deploy/rollout.sh
 ```
 
 Default behavior:
 
-- builds with `nerdctl` in namespace `k8s.io`
-- builds the image for `linux/amd64` by default, matching the pinned `sietch-tabr` node
-- tags the image as `ghcr.io/albindalbert/t3code:latest`
 - applies `deploy/kubernetes/t3code-server.yaml`
-- sets the `deploy/t3code` container image to the exact built tag
-- restarts `deploy/t3code`
-
-The script deploys to the `t3` namespace by default and assumes the target Kubernetes namespace
-already exists.
+- sets `deploy/t3code` container `t3code` to `ghcr.io/albindalbert/t3code:latest`
+- waits for the rollout to finish
+- relies on `imagePullPolicy: Always` so a refreshed `latest` tag is pulled
 
 Supported environment variables:
 
@@ -44,23 +91,30 @@ Supported environment variables:
 IMAGE_REPO=ghcr.io/albindalbert/t3code
 IMAGE_TAG=latest
 K8S_NAMESPACE=t3
-NERDCTL_NAMESPACE=k8s.io
-NO_CACHE=1
-TARGETARCH=amd64|arm64
-TARGETPLATFORM=linux/amd64|linux/arm64
+MANIFEST=deploy/kubernetes/t3code-server.yaml
+DEPLOYMENT=t3code
+CONTAINER=t3code
 ```
 
 Example:
 
 ```bash
-IMAGE_TAG=dev ./deploy.sh dev
+IMAGE_TAG=dev ./deploy/rollout.sh dev
 ```
 
-If you intentionally want an ARM image for local Pi testing instead of the `sietch-tabr` deployment
-target, override the architecture:
+## One Command From A Laptop
+
+The root script keeps the fast local path as the default:
 
 ```bash
-TARGETARCH=arm64 IMAGE_TAG=pi ./deploy.sh pi
+./deploy.sh
+```
+
+That builds and pushes, then prints the exact control-plane rollout command. If your laptop already
+has `kubectl` pointed at the cluster, you can make it do both:
+
+```bash
+ROLLOUT=1 ./deploy.sh
 ```
 
 ## Run It Locally
