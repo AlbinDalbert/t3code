@@ -1,4 +1,5 @@
 import {
+  AuthSessionId,
   type AuthBearerBootstrapResult,
   type AuthClientSession,
   type AuthBootstrapResult,
@@ -68,6 +69,12 @@ export const makeServerAuth = Effect.gen(function* () {
   const authControlPlane = yield* AuthControlPlane;
   const sessions = yield* SessionCredentialService;
   const descriptor = yield* policy.getDescriptor();
+  const unsafeNoAuthSession: AuthenticatedSession = {
+    sessionId: AuthSessionId.make("unsafe-no-auth"),
+    subject: "unsafe-no-auth",
+    method: "bearer-session-token",
+    role: "owner",
+  };
 
   const authenticateToken = (token: string): Effect.Effect<AuthenticatedSession, AuthError> =>
     sessions.verify(token).pipe(
@@ -96,6 +103,10 @@ export const makeServerAuth = Effect.gen(function* () {
     );
 
   const authenticateRequest = (request: HttpServerRequest.HttpServerRequest) => {
+    if (descriptor.policy === "unsafe-no-auth") {
+      return Effect.succeed(unsafeNoAuthSession);
+    }
+
     const cookieToken = request.cookies[sessions.cookieName];
     const bearerToken = parseBearerToken(request);
     const credential = cookieToken ?? bearerToken;

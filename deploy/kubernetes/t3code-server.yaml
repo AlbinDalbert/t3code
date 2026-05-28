@@ -82,6 +82,8 @@ spec:
               value: /workspace
             - name: CODEX_HOME
               value: /var/lib/codex
+            - name: T3CODE_UNSAFE_NO_AUTH
+              value: "true"
           ports:
             - name: http
               containerPort: 3773
