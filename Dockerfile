@@ -38,7 +38,7 @@ FROM oven/bun:1.3.11 AS runtime
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates git openssh-client \
+  && apt-get install -y --no-install-recommends ca-certificates gh git openssh-client \
   && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
