@@ -112,6 +112,13 @@ Example:
 IMAGE_TAG=dev ./deploy/rollout.sh dev
 ```
 
+If the deployment gets into a bad rollout state and you want to kill the app pods and recreate the
+deployment cleanly while keeping the PVCs, use:
+
+```bash
+RESET=1 ./deploy/rollout.sh
+```
+
 ## One Command From A Laptop
 
 The root script keeps the fast local path as the default:
