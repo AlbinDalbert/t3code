@@ -60,6 +60,8 @@ spec:
       labels:
         app: t3code
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull
       nodeSelector:
         kubernetes.io/hostname: sietch-tabr
       containers:

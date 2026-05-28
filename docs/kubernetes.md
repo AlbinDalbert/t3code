@@ -78,6 +78,16 @@ Run this on the control plane, or anywhere with a working `kubectl` context:
 ./deploy/rollout.sh
 ```
 
+Before the first rollout, create the GHCR pull secret used by the deployment:
+
+```bash
+export GITHUB_TOKEN=your_github_pat
+./deploy/create-ghcr-pull-secret.sh
+```
+
+That script creates or updates the `ghcr-pull` secret in namespace `t3`. The deployment manifest
+references that secret through `imagePullSecrets`, so the node can pull a private image from GHCR.
+
 Default behavior:
 
 - applies `deploy/kubernetes/t3code-server.yaml`
