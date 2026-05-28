@@ -173,6 +173,9 @@ The deployment uses `strategy: Recreate` instead of a rolling update. That match
 single replica, one pinned node, and `ReadWriteOnce` PVCs. It avoids overlapping ReplicaSets during
 updates and makes failures easier to interpret.
 
+The pod also sets `enableServiceLinks: false`. Kubernetes otherwise injects service env vars like
+`T3CODE_PORT=tcp://...`, which collides with the server's own `T3CODE_PORT` numeric config.
+
 The PVCs request the `local-path` storage class, and the pod is pinned to the Kubernetes node whose
 hostname label is `sietch-tabr`. The deploy script builds `linux/amd64` by default for that node. If
 the node is offline or `NotReady`, the deployment is expected to remain pending until it comes back.

@@ -62,6 +62,7 @@ spec:
       labels:
         app: t3code
     spec:
+      enableServiceLinks: false
       imagePullSecrets:
         - name: ghcr-pull
       nodeSelector:
