@@ -1229,7 +1229,7 @@ function OpenCommandPaletteDialog() {
           source: addProjectCloneFlow.source,
           repositoryInput: rawRepository,
           repository,
-          remoteUrl: repository.sshUrl,
+          remoteUrl: repository.url,
         });
         setHighlightedItemValue(null);
         setQuery(destinationPath);
