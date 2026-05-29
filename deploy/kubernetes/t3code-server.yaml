@@ -80,6 +80,8 @@ spec:
               value: /var/lib/t3code
             - name: GH_CONFIG_DIR
               value: /var/lib/t3code/gh
+            - name: GIT_CONFIG_GLOBAL
+              value: /var/lib/t3code/gitconfig
             - name: T3_WORKSPACE
               value: /workspace
             - name: CODEX_HOME
