@@ -11,10 +11,9 @@ export const makeServerAuthPolicy = Effect.gen(function* () {
   const config = yield* ServerConfig;
   const isRemoteReachable = isWildcardHost(config.host) || !isLoopbackHost(config.host);
 
-  const policy =
-    config.unsafeNoAuth
-      ? "unsafe-no-auth"
-      : config.mode === "desktop"
+  const policy = config.unsafeNoAuth
+    ? "unsafe-no-auth"
+    : config.mode === "desktop"
       ? isRemoteReachable
         ? "remote-reachable"
         : "desktop-managed-local"
@@ -26,10 +25,10 @@ export const makeServerAuthPolicy = Effect.gen(function* () {
     policy === "unsafe-no-auth"
       ? []
       : policy === "desktop-managed-local"
-      ? ["desktop-bootstrap"]
-      : config.mode === "desktop" && policy === "remote-reachable"
-        ? ["desktop-bootstrap", "one-time-token"]
-        : ["one-time-token"];
+        ? ["desktop-bootstrap"]
+        : config.mode === "desktop" && policy === "remote-reachable"
+          ? ["desktop-bootstrap", "one-time-token"]
+          : ["one-time-token"];
 
   const descriptor: ServerAuthDescriptor = {
     policy,

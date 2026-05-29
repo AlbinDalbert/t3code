@@ -38,7 +38,7 @@ FROM oven/bun:1.3.11 AS runtime
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates gh git openssh-client vim \
+  && apt-get install -y --no-install-recommends ca-certificates docker-buildx docker-cli gh git openssh-client ripgrep vim \
   && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
