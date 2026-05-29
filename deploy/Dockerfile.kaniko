@@ -24,14 +24,11 @@ COPY packages/ssh/package.json packages/ssh/package.json
 COPY packages/tailscale/package.json packages/tailscale/package.json
 COPY scripts/package.json scripts/package.json
 
-RUN --mount=type=cache,target=/root/.bun/install/cache \
-  bun install --frozen-lockfile
+RUN bun install --frozen-lockfile
 
 COPY . .
-RUN --mount=type=cache,target=/app/.turbo \
-  bun run --filter=@t3tools/web build
-RUN --mount=type=cache,target=/app/.turbo \
-  bun run --filter=t3 build
+RUN bun run --filter=@t3tools/web build
+RUN bun run --filter=t3 build
 
 FROM oven/bun:1.3.11 AS runtime
 
@@ -51,8 +48,7 @@ ENV T3_PORT=3773
 
 COPY --from=build /app /app
 
-RUN --mount=type=cache,target=/root/.bun/install/cache \
-  bun install --global @openai/codex \
+RUN bun install --global @openai/codex \
   && mkdir -p /var/lib/t3code /var/lib/codex /workspace \
   && mkdir -p /root/.ssh \
   && ssh-keyscan github.com >> /root/.ssh/known_hosts \

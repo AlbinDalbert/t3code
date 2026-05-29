@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: t3code-kaniko-build
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: t3code-kaniko-build
+    spec:
+      restartPolicy: Never
+      enableServiceLinks: false
+      nodeSelector:
+        kubernetes.io/hostname: sietch-tabr
+      containers:
+        - name: kaniko
+          image: gcr.io/kaniko-project/executor:v1.24.0-debug
+          args:
+            - --context=dir:///workspace/t3code
+            - --dockerfile=/workspace/t3code/deploy/Dockerfile.kaniko
+            - --destination=ghcr.io/albindalbert/t3code:latest
+            - --cache=true
+            - --cache-repo=ghcr.io/albindalbert/t3code/cache
+            - --snapshot-mode=redo
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+            - name: docker-config
+              mountPath: /kaniko/.docker
+              readOnly: true
+      volumes:
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: t3code-workspace
+        - name: docker-config
+          secret:
+            secretName: ghcr-pull
+            items:
+              - key: .dockerconfigjson
+                path: config.json
