@@ -36,7 +36,9 @@ kubectl apply -n "${K8S_NAMESPACE}" -f "${MANIFEST}"
 echo "Setting deploy/${DEPLOYMENT} ${CONTAINER} image to ${IMAGE}"
 kubectl set image "deploy/${DEPLOYMENT}" "${CONTAINER}=${IMAGE}" -n "${K8S_NAMESPACE}"
 
+
 echo "Waiting for deploy/${DEPLOYMENT} rollout"
+kubectl rollout restart "deploy/${DEPLOYMENT}" -n "${K8S_NAMESPACE}"
 kubectl rollout status "deploy/${DEPLOYMENT}" -n "${K8S_NAMESPACE}"
 
 echo "Rolled out ${IMAGE}"
