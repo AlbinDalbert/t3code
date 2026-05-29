@@ -62,6 +62,7 @@ interface ChatMarkdownProps {
   cwd: string | undefined;
   isStreaming?: boolean;
   skills?: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">>;
+  onOpenFileView?: (filePath: string) => void;
 }
 
 const EMPTY_MARKDOWN_SKILLS: ReadonlyArray<Pick<ServerProviderSkill, "name" | "displayName">> = [];
@@ -284,6 +285,7 @@ interface MarkdownFileLinkProps {
   label: string;
   theme: "light" | "dark";
   className?: string | undefined;
+  onOpenFileView?: ((filePath: string) => void) | undefined;
 }
 
 const MARKDOWN_LINK_HREF_PATTERN = /\[[^\]]*]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
@@ -375,8 +377,14 @@ const MarkdownFileLink = memo(function MarkdownFileLink({
   label,
   theme,
   className,
+  onOpenFileView,
 }: MarkdownFileLinkProps) {
   const handleOpen = useCallback(() => {
+    if (onOpenFileView) {
+      onOpenFileView(filePath);
+      return;
+    }
+
     const api = readLocalApi();
     if (!api) {
       toastManager.add({
@@ -395,7 +403,7 @@ const MarkdownFileLink = memo(function MarkdownFileLink({
         }),
       );
     });
-  }, [targetPath]);
+  }, [filePath, onOpenFileView, targetPath]);
 
   const handleCopy = useCallback((value: string, title: string) => {
     if (typeof window === "undefined" || !navigator.clipboard?.writeText) {
@@ -508,7 +516,8 @@ function areMarkdownFileLinkPropsEqual(
     previous.filePath === next.filePath &&
     previous.label === next.label &&
     previous.theme === next.theme &&
-    previous.className === next.className
+    previous.className === next.className &&
+    previous.onOpenFileView === next.onOpenFileView
   );
 }
 
@@ -517,6 +526,7 @@ function ChatMarkdown({
   cwd,
   isStreaming = false,
   skills = EMPTY_MARKDOWN_SKILLS,
+  onOpenFileView,
 }: ChatMarkdownProps) {
   const { resolvedTheme } = useTheme();
   const diffThemeName = resolveDiffThemeName(resolvedTheme);
@@ -577,6 +587,7 @@ function ChatMarkdown({
             label={labelParts.join(" · ")}
             theme={resolvedTheme}
             className={props.className}
+            onOpenFileView={cwd ? onOpenFileView : undefined}
           />
         );
       },
@@ -604,9 +615,11 @@ function ChatMarkdown({
     }),
     [
       diffThemeName,
+      cwd,
       fileLinkParentSuffixByPath,
       isStreaming,
       markdownFileLinkMetaByHref,
+      onOpenFileView,
       resolvedTheme,
       skills,
     ],

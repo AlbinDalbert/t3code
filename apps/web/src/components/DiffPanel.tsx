@@ -22,6 +22,7 @@ import {
   useState,
 } from "react";
 import { openInPreferredEditor } from "../editorPreferences";
+import { readEnvironmentApi } from "../environmentApi";
 import { useGitStatus } from "~/lib/gitStatusState";
 import { checkpointDiffQueryOptions } from "~/lib/providerReactQuery";
 import { cn } from "~/lib/utils";
@@ -177,6 +178,81 @@ function getDiffCollapseIconClassName(fileDiff: FileDiffMetadata): string {
   }
 }
 
+function WorkspaceFileViewer({
+  filePath,
+  contents,
+  isLoading,
+  error,
+}: {
+  readonly filePath: string;
+  readonly contents: string | undefined;
+  readonly isLoading: boolean;
+  readonly error: string | null;
+}) {
+  const lines = useMemo(() => {
+    if (typeof contents !== "string") return [];
+    const normalized = contents.replace(/\r\n/g, "\n");
+    const splitLines = normalized.split("\n");
+    if (splitLines.length > 1 && splitLines[splitLines.length - 1] === "") {
+      splitLines.pop();
+    }
+    let offset = 0;
+    return splitLines.map((text, index) => {
+      const key = `${offset}:${text.length}`;
+      offset += text.length + 1;
+      return { key, number: index + 1, text };
+    });
+  }, [contents]);
+  const lineNumberWidth = Math.max(2, String(Math.max(1, lines.length)).length);
+
+  if (isLoading) {
+    return <DiffPanelLoadingState label="Loading workspace file..." />;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-5 text-center text-xs text-red-500/80">
+        {error}
+      </div>
+    );
+  }
+
+  if (typeof contents !== "string") {
+    return (
+      <div className="flex flex-1 items-center justify-center px-5 text-center text-xs text-muted-foreground/70">
+        No file content available.
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-0 min-w-0 flex-1 overflow-auto px-2 pb-2">
+      <div className="mt-2 min-w-max rounded-md border border-border/70 bg-background/70 font-mono text-[11px] leading-relaxed">
+        {lines.length === 0 ? (
+          <div className="px-3 py-2 text-muted-foreground/70">Empty file: {filePath}</div>
+        ) : (
+          lines.map((line) => (
+            <div
+              key={line.key}
+              className="grid grid-cols-[auto_1fr] border-b border-border/30 last:border-b-0 hover:bg-foreground/[0.03]"
+            >
+              <span
+                className="select-none border-r border-border/50 bg-muted/30 px-2 py-0.5 text-right text-muted-foreground/60"
+                style={{ minWidth: `${lineNumberWidth + 2}ch` }}
+              >
+                {line.number}
+              </span>
+              <span className="whitespace-pre px-3 py-0.5 text-foreground/85">
+                {line.text || " "}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface DiffPanelProps {
   mode?: DiffPanelMode;
 }
@@ -204,6 +280,7 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
   });
   const diffSearch = useSearch({ strict: false, select: (search) => parseDiffRouteSearch(search) });
   const diffOpen = diffSearch.diff === "1";
+  const selectedFileViewPath = diffSearch.diffFileViewPath ?? null;
   const activeThreadId = routeThreadRef?.threadId ?? null;
   const activeThread = useStore(
     useMemo(() => createThreadSelectorByRef(routeThreadRef), [routeThreadRef]),
@@ -218,6 +295,22 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
       : undefined,
   );
   const activeCwd = activeThread?.worktreePath ?? activeProject?.cwd;
+  const fileViewQuery = useQuery({
+    queryKey: [
+      "workspace-file",
+      activeThread?.environmentId ?? null,
+      activeCwd ?? null,
+      selectedFileViewPath,
+    ],
+    enabled: Boolean(activeCwd && selectedFileViewPath),
+    queryFn: async () => {
+      const api = activeThread ? readEnvironmentApi(activeThread.environmentId) : undefined;
+      if (!api || !activeCwd || !selectedFileViewPath) {
+        throw new Error("Workspace file API is unavailable.");
+      }
+      return api.projects.readFile({ cwd: activeCwd, relativePath: selectedFileViewPath });
+    },
+  });
   const gitStatusQuery = useGitStatus({
     environmentId: activeThread?.environmentId ?? null,
     cwd: activeCwd ?? null,
@@ -473,7 +566,11 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
     selectedChip?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
   }, [selectedTurn?.turnId, selectedTurnId]);
 
-  const headerRow = (
+  const headerRow = selectedFileViewPath ? (
+    <div className="min-w-0 flex-1 truncate px-1 font-mono text-[11px] text-muted-foreground [-webkit-app-region:no-drag]">
+      {selectedFileViewPath}
+    </div>
+  ) : (
     <>
       <div className="relative min-w-0 flex-1 [-webkit-app-region:no-drag]">
         <button
@@ -620,6 +717,19 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
         <div className="flex flex-1 items-center justify-center px-5 text-center text-xs text-muted-foreground/70">
           Select a thread to inspect turn diffs.
         </div>
+      ) : selectedFileViewPath ? (
+        <WorkspaceFileViewer
+          filePath={selectedFileViewPath}
+          contents={fileViewQuery.data?.contents}
+          isLoading={fileViewQuery.isLoading}
+          error={
+            fileViewQuery.error instanceof Error
+              ? fileViewQuery.error.message
+              : fileViewQuery.error
+                ? "Failed to load workspace file."
+                : null
+          }
+        />
       ) : !isGitRepo ? (
         <div className="flex flex-1 items-center justify-center px-5 text-center text-xs text-muted-foreground/70">
           Turn diffs are unavailable because this project is not a git repository.
