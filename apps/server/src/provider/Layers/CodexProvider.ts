@@ -52,6 +52,7 @@ const REASONING_EFFORT_LABELS: Record<CodexSchema.V2ModelListResponse__Reasoning
   high: "High",
   xhigh: "Extra High",
 };
+const DEFAULT_CODEX_REASONING_EFFORT: CodexSchema.V2ModelListResponse__ReasoningEffort = "low";
 
 function codexAccountAuthLabel(account: CodexSchema.V2GetAccountResponse["account"]) {
   if (!account) return undefined;
@@ -96,8 +97,13 @@ function codexAccountEmail(account: CodexSchema.V2GetAccountResponse["account"])
 function mapCodexModelCapabilities(
   model: CodexSchema.V2ModelListResponse__Model,
 ): ModelCapabilities {
+  const defaultReasoningEffort = model.supportedReasoningEfforts.some(
+    ({ reasoningEffort }) => reasoningEffort === DEFAULT_CODEX_REASONING_EFFORT,
+  )
+    ? DEFAULT_CODEX_REASONING_EFFORT
+    : model.defaultReasoningEffort;
   const reasoningOptions = model.supportedReasoningEfforts.map(({ reasoningEffort }) =>
-    reasoningEffort === model.defaultReasoningEffort
+    reasoningEffort === defaultReasoningEffort
       ? {
           id: reasoningEffort,
           label: REASONING_EFFORT_LABELS[reasoningEffort],
