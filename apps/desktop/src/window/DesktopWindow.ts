@@ -88,8 +88,8 @@ function getIconOption(
   });
 }
 
-function getInitialWindowBackgroundColor(shouldUseDarkColors: boolean): string {
-  return shouldUseDarkColors ? "#0a0a0a" : "#ffffff";
+function getInitialWindowBackgroundColor(): string {
+  return "#19110b";
 }
 
 function getWindowTitleBarOptions(shouldUseDarkColors: boolean): WindowTitleBarOptions {
@@ -119,7 +119,7 @@ function syncWindowAppearance(
       return;
     }
 
-    window.setBackgroundColor(getInitialWindowBackgroundColor(shouldUseDarkColors));
+    window.setBackgroundColor(getInitialWindowBackgroundColor());
     const { titleBarOverlay } = getWindowTitleBarOptions(shouldUseDarkColors);
     if (typeof titleBarOverlay === "object") {
       window.setTitleBarOverlay(titleBarOverlay);
@@ -169,7 +169,7 @@ const make = Effect.gen(function* () {
       minHeight: 620,
       show: false,
       autoHideMenuBar: true,
-      backgroundColor: getInitialWindowBackgroundColor(shouldUseDarkColors),
+      backgroundColor: getInitialWindowBackgroundColor(),
       ...iconOption,
       title: environment.displayName,
       ...getWindowTitleBarOptions(shouldUseDarkColors),
