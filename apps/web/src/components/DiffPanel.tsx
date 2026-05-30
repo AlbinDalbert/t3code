@@ -1,5 +1,11 @@
 import { parsePatchFiles } from "@pierre/diffs";
-import { FileDiff, type FileDiffMetadata, Virtualizer } from "@pierre/diffs/react";
+import {
+  File as RenderedFile,
+  FileDiff,
+  type FileContents,
+  type FileDiffMetadata,
+  Virtualizer,
+} from "@pierre/diffs/react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { scopeThreadRef } from "@t3tools/client-runtime";
@@ -31,7 +37,7 @@ import { resolvePathLinkTarget } from "../terminal-links";
 import { parseDiffRouteSearch, stripDiffSearchParams } from "../diffRouteSearch";
 import { toWorkspaceRelativePath } from "../workspaceRelativePath";
 import { useTheme } from "../hooks/useTheme";
-import { buildPatchCacheKey } from "../lib/diffRendering";
+import { buildPatchCacheKey, buildTextCacheKey } from "../lib/diffRendering";
 import { resolveDiffThemeName } from "../lib/diffRendering";
 import { useTurnDiffSummaries } from "../hooks/useTurnDiffSummaries";
 import { selectProjectByRef, useStore } from "../store";
@@ -184,27 +190,27 @@ function WorkspaceFileViewer({
   contents,
   isLoading,
   error,
+  resolvedTheme,
+  wordWrap,
 }: {
   readonly filePath: string;
   readonly contents: string | undefined;
   readonly isLoading: boolean;
   readonly error: string | null;
+  readonly resolvedTheme: DiffThemeType;
+  readonly wordWrap: boolean;
 }) {
-  const lines = useMemo(() => {
-    if (typeof contents !== "string") return [];
-    const normalized = contents.replace(/\r\n/g, "\n");
-    const splitLines = normalized.split("\n");
-    if (splitLines.length > 1 && splitLines[splitLines.length - 1] === "") {
-      splitLines.pop();
+  const renderedFile = useMemo<FileContents | null>(() => {
+    if (typeof contents !== "string") {
+      return null;
     }
-    let offset = 0;
-    return splitLines.map((text, index) => {
-      const key = `${offset}:${text.length}`;
-      offset += text.length + 1;
-      return { key, number: index + 1, text };
-    });
-  }, [contents]);
-  const lineNumberWidth = Math.max(2, String(Math.max(1, lines.length)).length);
+
+    return {
+      name: filePath,
+      contents,
+      cacheKey: buildTextCacheKey(contents, `workspace-file:${filePath}`),
+    };
+  }, [contents, filePath]);
 
   if (isLoading) {
     return <DiffPanelLoadingState label="Loading workspace file..." />;
@@ -218,7 +224,7 @@ function WorkspaceFileViewer({
     );
   }
 
-  if (typeof contents !== "string") {
+  if (!renderedFile) {
     return (
       <div className="flex flex-1 items-center justify-center px-5 text-center text-xs text-muted-foreground/70">
         No file content available.
@@ -227,29 +233,28 @@ function WorkspaceFileViewer({
   }
 
   return (
-    <div className="min-h-0 min-w-0 flex-1 overflow-auto px-2 pb-2">
-      <div className="mt-2 min-w-max rounded-md border border-border/70 bg-background/70 font-mono text-[11px] leading-relaxed">
-        {lines.length === 0 ? (
-          <div className="px-3 py-2 text-muted-foreground/70">Empty file: {filePath}</div>
-        ) : (
-          lines.map((line) => (
-            <div
-              key={line.key}
-              className="grid grid-cols-[auto_1fr] border-b border-border/30 last:border-b-0 hover:bg-foreground/[0.03]"
-            >
-              <span
-                className="select-none border-r border-border/50 bg-muted/30 px-2 py-0.5 text-right text-muted-foreground/60"
-                style={{ minWidth: `${lineNumberWidth + 2}ch` }}
-              >
-                {line.number}
-              </span>
-              <span className="whitespace-pre px-3 py-0.5 text-foreground/85">
-                {line.text || " "}
-              </span>
-            </div>
-          ))
-        )}
-      </div>
+    <div className="diff-panel-viewport min-h-0 min-w-0 flex-1 overflow-hidden">
+      <Virtualizer
+        className="diff-render-surface h-full min-h-0 overflow-auto px-2 pb-2"
+        config={{
+          overscrollSize: 600,
+          intersectionObserverMargin: 1200,
+        }}
+      >
+        <div className="diff-render-file mb-2 rounded-md first:mt-2 last:mb-0">
+          <RenderedFile
+            key={`${renderedFile.cacheKey}:${resolvedTheme}`}
+            file={renderedFile}
+            options={{
+              disableFileHeader: true,
+              overflow: wordWrap ? "wrap" : "scroll",
+              theme: resolveDiffThemeName(resolvedTheme),
+              themeType: resolvedTheme,
+              unsafeCSS: DIFF_PANEL_UNSAFE_CSS,
+            }}
+          />
+        </div>
+      </Virtualizer>
     </div>
   );
 }
@@ -571,9 +576,25 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
   }, [selectedTurn?.turnId, selectedTurnId]);
 
   const headerRow = selectedFileViewPath ? (
-    <div className="min-w-0 flex-1 truncate px-1 font-mono text-[11px] text-muted-foreground [-webkit-app-region:no-drag]">
-      {selectedFileViewPath}
-    </div>
+    <>
+      <div className="min-w-0 flex-1 truncate px-1 font-mono text-[11px] text-muted-foreground [-webkit-app-region:no-drag]">
+        {selectedFileViewPath}
+      </div>
+      <div className="flex shrink-0 items-center gap-1 [-webkit-app-region:no-drag]">
+        <Toggle
+          aria-label={diffWordWrap ? "Disable file line wrapping" : "Enable file line wrapping"}
+          title={diffWordWrap ? "Disable line wrapping" : "Enable line wrapping"}
+          variant="outline"
+          size="xs"
+          pressed={diffWordWrap}
+          onPressedChange={(pressed) => {
+            setDiffWordWrap(Boolean(pressed));
+          }}
+        >
+          <TextWrapIcon className="size-3" />
+        </Toggle>
+      </div>
+    </>
   ) : (
     <>
       <div className="relative min-w-0 flex-1 [-webkit-app-region:no-drag]">
@@ -726,6 +747,8 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
           filePath={selectedFileViewPath}
           contents={fileViewQuery.data?.contents}
           isLoading={fileViewQuery.isLoading}
+          resolvedTheme={resolvedTheme}
+          wordWrap={diffWordWrap}
           error={
             fileViewQuery.error instanceof Error
               ? fileViewQuery.error.message

@@ -27,13 +27,12 @@ export function fnv1a32(
   return hash >>> 0;
 }
 
+export function buildTextCacheKey(text: string, scope: string): string {
+  const primary = fnv1a32(text, FNV_OFFSET_BASIS_32, FNV_PRIME_32).toString(36);
+  const secondary = fnv1a32(text, SECONDARY_HASH_SEED, SECONDARY_HASH_MULTIPLIER).toString(36);
+  return `${scope}:${text.length}:${primary}:${secondary}`;
+}
+
 export function buildPatchCacheKey(patch: string, scope = "diff-panel"): string {
-  const normalizedPatch = patch.trim();
-  const primary = fnv1a32(normalizedPatch, FNV_OFFSET_BASIS_32, FNV_PRIME_32).toString(36);
-  const secondary = fnv1a32(
-    normalizedPatch,
-    SECONDARY_HASH_SEED,
-    SECONDARY_HASH_MULTIPLIER,
-  ).toString(36);
-  return `${scope}:${normalizedPatch.length}:${primary}:${secondary}`;
+  return buildTextCacheKey(patch.trim(), scope);
 }

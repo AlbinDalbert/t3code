@@ -60,11 +60,37 @@ describe("parseDiffRouteSearch", () => {
     });
   });
 
+  it("parses workspace file view paths", () => {
+    const parsed = parseDiffRouteSearch({
+      diff: "1",
+      diffFileViewPath: "src/app.ts",
+    });
+
+    expect(parsed).toEqual({
+      diff: "1",
+      diffFileViewPath: "src/app.ts",
+    });
+  });
+
+  it("lets turn diffs take precedence over stale file view paths", () => {
+    const parsed = parseDiffRouteSearch({
+      diff: "1",
+      diffTurnId: "turn-1",
+      diffFileViewPath: "src/app.ts",
+    });
+
+    expect(parsed).toEqual({
+      diff: "1",
+      diffTurnId: "turn-1",
+    });
+  });
+
   it("normalizes whitespace-only values", () => {
     const parsed = parseDiffRouteSearch({
       diff: "1",
       diffTurnId: "  ",
       diffFilePath: "  ",
+      diffFileViewPath: "  ",
     });
 
     expect(parsed).toEqual({
