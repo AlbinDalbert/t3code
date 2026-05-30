@@ -92,6 +92,7 @@ import {
   LockIcon,
   LockOpenIcon,
   PenLineIcon,
+  PlusIcon,
   XIcon,
 } from "lucide-react";
 import { proposedPlanTitle } from "../../proposedPlan";
@@ -810,6 +811,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   const composerEditorRef = useRef<ComposerPromptEditorHandle>(null);
   const composerFormRef = useRef<HTMLFormElement>(null);
   const composerSurfaceRef = useRef<HTMLDivElement>(null);
+  const imageFileInputRef = useRef<HTMLInputElement>(null);
   const composerFormHeightRef = useRef(0);
   const composerSelectLockRef = useRef(false);
   const composerMenuOpenRef = useRef(false);
@@ -1741,6 +1743,24 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     removeComposerImageFromDraft(imageId);
   };
 
+  const openImageFilePicker = () => {
+    if (pendingUserInputs.length > 0) {
+      toastManager.add({
+        type: "error",
+        title: "Attach images after answering plan questions.",
+      });
+      return;
+    }
+    imageFileInputRef.current?.click();
+  };
+
+  const onImageFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.currentTarget.files ?? []);
+    event.currentTarget.value = "";
+    addComposerImages(files);
+    focusComposer();
+  };
+
   // ------------------------------------------------------------------
   // Callbacks: paste / drag
   // ------------------------------------------------------------------
@@ -1954,6 +1974,16 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       className="mx-auto w-full min-w-0 max-w-208"
       data-chat-composer-form="true"
     >
+      <input
+        ref={imageFileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={onImageFileInputChange}
+      />
       <div
         className={cn(
           "group rounded-[22px] p-px transition-colors duration-200",
@@ -2324,6 +2354,26 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
               )}
             >
               <div className="-m-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="ghost"
+                        className="shrink-0 rounded-full text-muted-foreground/70 hover:text-foreground/80"
+                        disabled={isComposerApprovalState || environmentUnavailable !== null}
+                        aria-label="Attach images"
+                        title="Attach images"
+                        onClick={openImageFilePicker}
+                      >
+                        <PlusIcon aria-hidden="true" className="size-4" />
+                      </Button>
+                    }
+                  />
+                  <TooltipPopup side="top">Attach images</TooltipPopup>
+                </Tooltip>
+
                 <ProviderModelPicker
                   compact={isComposerFooterCompact}
                   activeInstanceId={selectedInstanceId}

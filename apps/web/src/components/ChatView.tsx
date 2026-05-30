@@ -44,6 +44,7 @@ import { readEnvironmentApi } from "../environmentApi";
 import { isElectron } from "../env";
 import { readLocalApi } from "../localApi";
 import { parseDiffRouteSearch, stripDiffSearchParams } from "../diffRouteSearch";
+import { toWorkspaceRelativePath } from "../workspaceRelativePath";
 import {
   collapseExpandedComposerCursor,
   parseStandaloneComposerSlashCommand,
@@ -177,11 +178,7 @@ import {
 } from "./ChatView.logic";
 import { useLocalStorage } from "~/hooks/useLocalStorage";
 import { useComposerHandleContext } from "../composerHandleContext";
-import {
-  useServerAvailableEditors,
-  useServerConfig,
-  useServerKeybindings,
-} from "~/rpc/serverState";
+import { useServerConfig, useServerKeybindings } from "~/rpc/serverState";
 import { sanitizeThreadErrorMessage } from "~/rpc/transportError";
 import { retainThreadDetailSubscription } from "../environments/runtime/service";
 import { RightPanelSheet } from "./RightPanelSheet";
@@ -1632,7 +1629,6 @@ export default function ChatView(props: ChatViewProps) {
     : null;
   const gitStatusQuery = useGitStatus({ environmentId, cwd: gitCwd });
   const keybindings = useServerKeybindings();
-  const availableEditors = useServerAvailableEditors();
   // Prefer an instance-id match so a custom Codex instance (e.g.
   // `codex_personal`) surfaces its own status/message in the banner rather
   // than the default Codex's. Falls back to first-match-by-kind when no
@@ -3482,6 +3478,7 @@ export default function ChatView(props: ChatViewProps) {
       if (!isServerThread) {
         return;
       }
+      const workspaceRelativePath = toWorkspaceRelativePath(filePath, activeWorkspaceRoot);
       onDiffPanelOpen?.();
       void navigate({
         to: "/$environmentId/$threadId",
@@ -3491,11 +3488,11 @@ export default function ChatView(props: ChatViewProps) {
         },
         search: (previous) => {
           const rest = stripDiffSearchParams(previous);
-          return { ...rest, diff: "1", diffFileViewPath: filePath };
+          return { ...rest, diff: "1", diffFileViewPath: workspaceRelativePath };
         },
       });
     },
-    [environmentId, isServerThread, navigate, onDiffPanelOpen, threadId],
+    [activeWorkspaceRoot, environmentId, isServerThread, navigate, onDiffPanelOpen, threadId],
   );
   // Both the Map and the revert handler are read from refs at call-time so
   // the callback reference is fully stable and never busts context identity.
@@ -3538,13 +3535,11 @@ export default function ChatView(props: ChatViewProps) {
           activeThreadTitle={activeThread.title}
           activeProjectName={activeProject?.name}
           isGitRepo={isGitRepo}
-          openInCwd={gitCwd}
           activeProjectScripts={activeProject?.scripts}
           preferredScriptId={
             activeProject ? (lastInvokedScriptByProjectId[activeProject.id] ?? null) : null
           }
           keybindings={keybindings}
-          availableEditors={availableEditors}
           terminalAvailable={activeProject !== undefined}
           terminalOpen={terminalState.terminalOpen}
           terminalToggleShortcutLabel={terminalToggleShortcutLabel}

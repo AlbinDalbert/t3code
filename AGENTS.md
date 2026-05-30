@@ -5,6 +5,7 @@
 - All of `bun fmt`, `bun lint`, and `bun typecheck` must pass before considering tasks completed.
 - NEVER run `bun test`. Always use `bun run test` (runs Vitest).
 - When building the deployable image, run the build-and-push script in the `deploy/` directory.
+- When a deployable image build is requested and no Dockerfile is specified, assume the Kaniko Dockerfile in `deploy/` should be used.
 
 ## Project Snapshot
 

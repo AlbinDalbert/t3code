@@ -29,6 +29,7 @@ import { cn } from "~/lib/utils";
 import { readLocalApi } from "../localApi";
 import { resolvePathLinkTarget } from "../terminal-links";
 import { parseDiffRouteSearch, stripDiffSearchParams } from "../diffRouteSearch";
+import { toWorkspaceRelativePath } from "../workspaceRelativePath";
 import { useTheme } from "../hooks/useTheme";
 import { buildPatchCacheKey } from "../lib/diffRendering";
 import { resolveDiffThemeName } from "../lib/diffRendering";
@@ -295,20 +296,23 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
       : undefined,
   );
   const activeCwd = activeThread?.worktreePath ?? activeProject?.cwd;
+  const selectedWorkspaceFileViewPath = selectedFileViewPath
+    ? toWorkspaceRelativePath(selectedFileViewPath, activeCwd)
+    : null;
   const fileViewQuery = useQuery({
     queryKey: [
       "workspace-file",
       activeThread?.environmentId ?? null,
       activeCwd ?? null,
-      selectedFileViewPath,
+      selectedWorkspaceFileViewPath,
     ],
-    enabled: Boolean(activeCwd && selectedFileViewPath),
+    enabled: Boolean(activeCwd && selectedWorkspaceFileViewPath),
     queryFn: async () => {
       const api = activeThread ? readEnvironmentApi(activeThread.environmentId) : undefined;
-      if (!api || !activeCwd || !selectedFileViewPath) {
+      if (!api || !activeCwd || !selectedWorkspaceFileViewPath) {
         throw new Error("Workspace file API is unavailable.");
       }
-      return api.projects.readFile({ cwd: activeCwd, relativePath: selectedFileViewPath });
+      return api.projects.readFile({ cwd: activeCwd, relativePath: selectedWorkspaceFileViewPath });
     },
   });
   const gitStatusQuery = useGitStatus({

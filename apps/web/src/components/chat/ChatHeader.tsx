@@ -1,6 +1,5 @@
 import {
   type EnvironmentId,
-  type EditorId,
   type ProjectScript,
   type ResolvedKeybindingsConfig,
   type ThreadId,
@@ -15,8 +14,6 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import ProjectScriptsControl, { type NewProjectScriptInput } from "../ProjectScriptsControl";
 import { Toggle } from "../ui/toggle";
 import { SidebarTrigger } from "../ui/sidebar";
-import { OpenInPicker } from "./OpenInPicker";
-import { usePrimaryEnvironmentId } from "../../environments/primary";
 
 interface ChatHeaderProps {
   activeThreadEnvironmentId: EnvironmentId;
@@ -25,11 +22,9 @@ interface ChatHeaderProps {
   activeThreadTitle: string;
   activeProjectName: string | undefined;
   isGitRepo: boolean;
-  openInCwd: string | null;
   activeProjectScripts: ProjectScript[] | undefined;
   preferredScriptId: string | null;
   keybindings: ResolvedKeybindingsConfig;
-  availableEditors: ReadonlyArray<EditorId>;
   terminalAvailable: boolean;
   terminalOpen: boolean;
   terminalToggleShortcutLabel: string | null;
@@ -44,18 +39,6 @@ interface ChatHeaderProps {
   onToggleDiff: () => void;
 }
 
-export function shouldShowOpenInPicker(input: {
-  readonly activeProjectName: string | undefined;
-  readonly activeThreadEnvironmentId: EnvironmentId;
-  readonly primaryEnvironmentId: EnvironmentId | null;
-}): boolean {
-  return (
-    Boolean(input.activeProjectName) &&
-    input.primaryEnvironmentId !== null &&
-    input.activeThreadEnvironmentId === input.primaryEnvironmentId
-  );
-}
-
 export const ChatHeader = memo(function ChatHeader({
   activeThreadEnvironmentId,
   activeThreadId,
@@ -63,11 +46,9 @@ export const ChatHeader = memo(function ChatHeader({
   activeThreadTitle,
   activeProjectName,
   isGitRepo,
-  openInCwd,
   activeProjectScripts,
   preferredScriptId,
   keybindings,
-  availableEditors,
   terminalAvailable,
   terminalOpen,
   terminalToggleShortcutLabel,
@@ -81,13 +62,6 @@ export const ChatHeader = memo(function ChatHeader({
   onToggleTerminal,
   onToggleDiff,
 }: ChatHeaderProps) {
-  const primaryEnvironmentId = usePrimaryEnvironmentId();
-  const showOpenInPicker = shouldShowOpenInPicker({
-    activeProjectName,
-    activeThreadEnvironmentId,
-    primaryEnvironmentId,
-  });
-
   return (
     <div className="@container/header-actions flex min-w-0 flex-1 items-center gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3">
@@ -98,11 +72,6 @@ export const ChatHeader = memo(function ChatHeader({
         >
           {activeThreadTitle}
         </h2>
-        {activeProjectName && (
-          <Badge variant="outline" className="min-w-0 shrink overflow-hidden">
-            <span className="min-w-0 truncate">{activeProjectName}</span>
-          </Badge>
-        )}
         {activeProjectName && !isGitRepo && (
           <Badge variant="outline" className="shrink-0 text-[10px] text-amber-700">
             No Git
@@ -119,13 +88,6 @@ export const ChatHeader = memo(function ChatHeader({
             onAddScript={onAddProjectScript}
             onUpdateScript={onUpdateProjectScript}
             onDeleteScript={onDeleteProjectScript}
-          />
-        )}
-        {showOpenInPicker && (
-          <OpenInPicker
-            keybindings={keybindings}
-            availableEditors={availableEditors}
-            openInCwd={openInCwd}
           />
         )}
         {activeProjectName && (

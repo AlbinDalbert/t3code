@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 
 type Theme = "light" | "dark" | "system";
+type AppTheme = Theme | "high-contrast";
 type ThemeSnapshot = {
-  theme: Theme;
+  theme: AppTheme;
   systemDark: boolean;
 };
 
@@ -31,10 +32,12 @@ function getSystemDark() {
   return typeof window !== "undefined" && window.matchMedia(MEDIA_QUERY).matches;
 }
 
-function getStored(): Theme {
+function getStored(): AppTheme {
   if (!hasThemeStorage()) return DEFAULT_THEME_SNAPSHOT.theme;
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw === "light" || raw === "dark" || raw === "system") return raw;
+  if (raw === "light" || raw === "dark" || raw === "system" || raw === "high-contrast") {
+    return raw;
+  }
   return DEFAULT_THEME_SNAPSHOT.theme;
 }
 
@@ -87,13 +90,15 @@ export function syncBrowserChromeTheme() {
   ensureThemeColorMetaTag().setAttribute("content", backgroundColor);
 }
 
-function applyTheme(theme: Theme, suppressTransitions = false) {
+function applyTheme(theme: AppTheme, suppressTransitions = false) {
   if (typeof document === "undefined" || typeof window === "undefined") return;
   if (suppressTransitions) {
     document.documentElement.classList.add("no-transitions");
   }
-  const isDark = theme === "dark" || (theme === "system" && getSystemDark());
+  const isDark =
+    theme === "dark" || theme === "high-contrast" || (theme === "system" && getSystemDark());
   document.documentElement.classList.toggle("dark", isDark);
+  document.documentElement.classList.toggle("high-contrast", theme === "high-contrast");
   syncBrowserChromeTheme();
   syncDesktopTheme(theme);
   if (suppressTransitions) {
@@ -106,16 +111,17 @@ function applyTheme(theme: Theme, suppressTransitions = false) {
   }
 }
 
-function syncDesktopTheme(theme: Theme) {
+function syncDesktopTheme(theme: AppTheme) {
   if (typeof window === "undefined") return;
   const bridge = window.desktopBridge;
-  if (!bridge || lastDesktopTheme === theme) {
+  const desktopTheme: Theme = theme === "high-contrast" ? "dark" : theme;
+  if (!bridge || lastDesktopTheme === desktopTheme) {
     return;
   }
 
-  lastDesktopTheme = theme;
-  void bridge.setTheme(theme).catch(() => {
-    if (lastDesktopTheme === theme) {
+  lastDesktopTheme = desktopTheme;
+  void bridge.setTheme(desktopTheme).catch(() => {
+    if (lastDesktopTheme === desktopTheme) {
       lastDesktopTheme = null;
     }
   });
@@ -176,9 +182,15 @@ export function useTheme() {
   const theme = snapshot.theme;
 
   const resolvedTheme: "light" | "dark" =
-    theme === "system" ? (snapshot.systemDark ? "dark" : "light") : theme;
+    theme === "system"
+      ? snapshot.systemDark
+        ? "dark"
+        : "light"
+      : theme === "high-contrast"
+        ? "dark"
+        : theme;
 
-  const setTheme = useCallback((next: Theme) => {
+  const setTheme = useCallback((next: AppTheme) => {
     if (!hasThemeStorage()) return;
     localStorage.setItem(STORAGE_KEY, next);
     applyTheme(next, true);

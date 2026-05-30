@@ -144,6 +144,41 @@
   }
 }
 
+:root.high-contrast {
+  color-scheme: dark;
+  --background: #270d06;
+  --app-chrome-background: var(--background);
+  --foreground: #ffcc66;
+  --card: #2d1200;
+  --card-foreground: #fff2cc;
+  --popover: #2d1200;
+  --popover-foreground: #fff2cc;
+  --primary: #ffcc00;
+  --primary-foreground: #270d06;
+  --secondary: #4d2600;
+  --secondary-foreground: #ffe5b4;
+  --muted: #2d1200;
+  --muted-foreground: #e8b85f;
+  --accent: color-mix(in srgb, #4d2600 72%, #ffcc00);
+  --accent-foreground: #fff2cc;
+  --destructive: #ff6b3a;
+  --border: #7a3a00;
+  --input: color-mix(in srgb, #4d2600 74%, #ffcc66);
+  --ring: #ffcc00;
+  --destructive-foreground: #ff9a75;
+  --info: #6666bb;
+  --info-foreground: #c9d2ff;
+  --success: #b3cc66;
+  --success-foreground: #e8f5a7;
+  --warning: #ffcc00;
+  --warning-foreground: #fff2cc;
+}
+
+:root.high-contrast ::selection {
+  background: #ffcc00;
+  color: #270d06;
+}
+
 body {
   font-family:
     "DM Sans",
